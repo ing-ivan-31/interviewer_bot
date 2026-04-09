@@ -19,7 +19,7 @@ This solves the biggest problem with AI coding agents: **context fills up and Cl
 | Agent | When to use | How to invoke |
 |-------|-------------|---------------|
 | `@architect` | Design a new module, review architectural decisions, plan API contracts | `@architect design the session lifecycle` |
-| `@spec-writer` | Write a spec before implementing anything | `/spec evaluation session pause` |
+| `@spec-writer` | Write a spec before implementing anything | `@spec-writer evaluation session pause` |
 | `@backend` | Implement NestJS modules, LangGraph nodes, auth, WebSocket | `@backend implement the sessions module` |
 | `@frontend` | Create Next.js pages, shadcn components, Zustand stores | `@frontend create the evaluation chat page` |
 | `@database` | Add Prisma models, indexes, migrations, seeds | `@database add pausedAt field to Session` |
@@ -170,8 +170,8 @@ Find why the ownership check is not accounting for the coordinator role.
 ```
 js-react-evaluator/
 ├── CLAUDE.md
-├── apps/
-│   ├── backend/                    ← NestJS backend
+├── src/
+│   ├── interviewer-evaluator-api/                    ← NestJS backend
 │   │   ├── src/
 │   │   │   ├── agent/
 │   │   │   │   ├── nodes/          ← LangGraph nodes
@@ -190,7 +190,7 @@ js-react-evaluator/
 │   │   └── prisma/
 │   │       ├── schema.prisma
 │   │       └── seed.ts
-│   └── frontend/                   ← Next.js 14 frontend
+│   └── interviewer-evaluator/                   ← Next.js 14 frontend
 │       ├── app/
 │       │   ├── (auth)/             ← Login page, Okta callback
 │       │   ├── dashboard/          ← Coordinator dashboard
@@ -208,9 +208,6 @@ js-react-evaluator/
 │       └── lib/
 │           ├── api.ts              ← centralized API client
 │           └── socket.ts           ← Socket.io singleton
-├── packages/
-│   ├── shared-types/               ← Shared TS interfaces (AgentState, DTOs)
-│   └── email/                      ← React Email templates (Resend)
 ├── .claude/
 │   ├── agents/                     ← sub-agent definitions
 │   └── commands/                   ← slash commands
