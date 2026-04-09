@@ -11,13 +11,10 @@ manage evaluations through a dashboard and receive reports by email.
 ## Architecture at a Glance
 
 ```
-js-react-evaluator/
+interviewer_bot/
 ├── src/
-│   ├── frontend/        Next.js 14 · TypeScript · shadcn/ui · Zustand
-│   └── backend/         NestJS · TypeScript · LangGraph · Prisma · SQLite
-├── packages/
-│   ├── shared-types/    Shared TypeScript interfaces (AgentState, DTOs)
-│   └── email/           React Email templates consumed by Resend
+│   ├── interviewer-evaluator/        Next.js 14 · TypeScript · shadcn/ui · Zustand
+│   └── interviewer-evaluator-api/         NestJS · TypeScript · LangGraph · Prisma · SQLite
 ├── docs/
 │   ├── specs/           Spec files — written before any code
 └── .claude/
