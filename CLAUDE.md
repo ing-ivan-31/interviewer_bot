@@ -122,23 +122,23 @@ NEXT_PUBLIC_OKTA_CLIENT_ID=0oa...
 ### 2. Install
 
 ```bash
-git clone <repo-url> js-react-evaluator
-cd js-react-evaluator
+git clone <repo-url> interviewer-evaluator
+cd interviewer-evaluator
 npm install
 ```
 
 ### 3. Configure environment
 
 ```bash
-cp apps/backend/.env.example apps/backend/.env
-cp apps/frontend/.env.example apps/frontend/.env.local
+cp src/interviewer-evaluator-api/.env.example apps/interviewer-evaluator-api/.env
+cp src/interviewer-evaluator/.env.example apps/interviewer-evaluator/.env.local
 # Edit both files — fill in your API keys before running
 ```
 
 ### 4. Database
 
 ```bash
-cd apps/backend
+cd src/interviewer-evaluator-api
 npx prisma migrate dev --name init
 npx prisma db seed
 # Optional: inspect data in a browser UI
@@ -152,8 +152,8 @@ npx prisma studio
 npm run dev
 
 # Or individually
-npm run dev:backend    # http://localhost:3001
-npm run dev:frontend   # http://localhost:3000
+npm run dev:interviewer-evaluator-api    # http://localhost:3001
+npm run dev:interviewer-evaluator   # http://localhost:3000
 ```
 
 ## Monorepo Scripts
@@ -161,8 +161,8 @@ npm run dev:frontend   # http://localhost:3000
 | Command              | What it does                          |
 |----------------------|---------------------------------------|
 | `npm run dev`        | Both apps concurrently                |
-| `npm run dev:frontend` | Next.js only                        |
-| `npm run dev:backend`  | NestJS only                         |
+| `npm run dev:interviewer-evaluator` | Next.js only                        |
+| `npm run dev:interviewer-evaluator-api`  | NestJS only                         |
 | `npm run test`       | All tests across workspaces           |
 | `npm run typecheck`  | TypeScript checks across workspaces   |
 | `npm run lint`       | ESLint across workspaces              |
