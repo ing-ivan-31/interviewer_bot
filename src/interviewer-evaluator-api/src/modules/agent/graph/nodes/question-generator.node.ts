@@ -1,4 +1,4 @@
-import { PromptTemplate, ChatPromptTemplate } from '@langchain/core/prompts';
+import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 import { Runnable } from '@langchain/core/runnables';
 import { getLlm } from '../../../../config/llm.config';

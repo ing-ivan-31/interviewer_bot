@@ -94,7 +94,7 @@ export class SessionStore {
     // Difficulty: Q1-2 = junior, Q3-4 = mid, Q5+ = senior
     let difficulty: Difficulty;
     if (questionNumber <= 2) {
-      difficulty = 'mid';
+      difficulty = 'junior';
     } else if (questionNumber <= 5) {
       difficulty = 'mid';
     } else {
