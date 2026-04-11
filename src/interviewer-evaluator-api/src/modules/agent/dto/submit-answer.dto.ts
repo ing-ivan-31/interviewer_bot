@@ -1,7 +1,8 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 
 /**
- * Submit answer DTO with validation.
+ * Zod schema for runtime validation.
  */
 export const SubmitAnswerSchema = z.object({
   answer: z
@@ -13,4 +14,18 @@ export const SubmitAnswerSchema = z.object({
     }),
 });
 
-export type SubmitAnswerDto = z.infer<typeof SubmitAnswerSchema>;
+export type SubmitAnswerInput = z.infer<typeof SubmitAnswerSchema>;
+
+/**
+ * Class DTO for Swagger documentation.
+ */
+export class SubmitAnswerDto {
+  @ApiProperty({
+    description: "The candidate's answer to the current question",
+    example:
+      'let and const are block-scoped while var is function-scoped. const prevents reassignment but not mutation of objects.',
+    minLength: 1,
+    maxLength: 2500,
+  })
+  answer: string;
+}

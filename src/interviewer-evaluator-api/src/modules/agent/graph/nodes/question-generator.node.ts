@@ -1,9 +1,10 @@
-import { PromptTemplate } from '@langchain/core/prompts';
+import { PromptTemplate, ChatPromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 import { Runnable } from '@langchain/core/runnables';
 import { getLlm } from '../../../../config/llm.config';
 import { AgentState } from '../state';
 import { QUESTION_GENERATOR_PROMPT } from '../prompts/question-generator.prompt';
+import { EVALUATOR_SYSTEM_PROMPT } from '../prompts/system-prompt';
 
 // Lazy chain initialization
 type ChainType = Runnable<Record<string, string>, string>;
@@ -14,7 +15,11 @@ function getChain(): ChainType {
     return chain;
   }
 
-  const prompt = PromptTemplate.fromTemplate(QUESTION_GENERATOR_PROMPT);
+  const prompt = ChatPromptTemplate.fromMessages([
+    ['system', EVALUATOR_SYSTEM_PROMPT],
+    ['human', QUESTION_GENERATOR_PROMPT],
+  ]);
+
   chain = prompt.pipe(getLlm()).pipe(new StringOutputParser());
   return chain;
 }
@@ -45,6 +50,8 @@ export async function questionGeneratorNode(
     topic: state.currentTopic,
     difficulty: state.currentDifficulty,
     previousQuestions,
+    questionNumber: state.currentQuestionNumber.toString(),
+    totalQuestions: state.maxQuestions.toString(),
   });
 
   const trimmedQuestion = question.trim();
