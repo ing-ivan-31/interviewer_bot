@@ -2,56 +2,64 @@
 
 import {
   InteractionRequiredAuthError,
-  SilentRequest,
+  AccountInfo,
 } from "@azure/msal-browser";
-import { msalInstance, defaultScopes } from "./msal-config";
+import { msalInstance, loginRequest } from "./msal-config";
 
-/**
- * Acquires an access token silently from the MSAL cache.
- * If silent acquisition fails (e.g. refresh token expired), redirects to /login.
- *
- * @param scopes - OAuth scopes to request. Defaults to ["openid", "profile", "email"].
- * @returns A promise that resolves to the access token string.
- */
+const DEFAULT_SCOPES = ["openid", "profile", "email"];
+
 export async function getAccessToken(
-  scopes: string[] = defaultScopes
+  scopes: string[] = DEFAULT_SCOPES
 ): Promise<string> {
   const accounts = msalInstance.getAllAccounts();
 
   if (accounts.length === 0) {
-    window.location.href = "/login";
-    // Return a promise that never resolves — redirect is in-flight
-    return new Promise(() => {});
+    throw new Error("No authenticated account found");
   }
 
-  const request: SilentRequest = {
-    scopes,
-    account: accounts[0],
-  };
+  const account = accounts[0];
 
   try {
-    const response = await msalInstance.acquireTokenSilent(request);
+    const response = await msalInstance.acquireTokenSilent({
+      scopes,
+      account,
+    });
     return response.accessToken;
   } catch (error) {
     if (error instanceof InteractionRequiredAuthError) {
-      window.location.href = "/login";
-      // Return a promise that never resolves — redirect is in-flight
-      return new Promise(() => {});
+      await msalInstance.loginRedirect({
+        ...loginRequest,
+        scopes,
+      });
+      throw new Error("Redirecting to login");
     }
     throw error;
   }
 }
 
-/**
- * Signs the user out by clearing the MSAL cache and triggering a logout redirect.
- * After logout, Azure AD redirects back to /login (configured as postLogoutRedirectUri).
- */
-export async function signOut(): Promise<void> {
+export function getActiveAccount(): AccountInfo | null {
   const accounts = msalInstance.getAllAccounts();
-  const account = accounts[0];
+  return accounts.length > 0 ? accounts[0] : null;
+}
+
+export function isAuthenticated(): boolean {
+  return msalInstance.getAllAccounts().length > 0;
+}
+
+export async function signOut(): Promise<void> {
+  const account = getActiveAccount();
 
   await msalInstance.logoutRedirect({
-    account: account ?? null,
+    account,
     postLogoutRedirectUri: "/login",
+  });
+}
+
+export async function signIn(redirectPath?: string): Promise<void> {
+  const state = redirectPath ? JSON.stringify({ redirectPath }) : undefined;
+
+  await msalInstance.loginRedirect({
+    ...loginRequest,
+    state,
   });
 }

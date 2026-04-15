@@ -1,56 +1,54 @@
 "use client";
 
-import { useMsal } from "@azure/msal-react";
-import { useSearchParams } from "next/navigation";
-import { defaultScopes } from "@/lib/auth/msal-config";
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useIsAuthenticated } from "@azure/msal-react";
+import { signIn } from "@/lib/auth/auth";
 
-export default function LoginPage() {
-  const { instance } = useMsal();
+export default function LoginPage(): React.ReactNode {
+  const isAuthenticated = useIsAuthenticated();
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const from = searchParams.get("from") ?? "/evaluation";
 
-  function handleSignIn(): void {
-    instance.loginRedirect({
-      scopes: defaultScopes,
-      state: from,
-    });
+  useEffect(() => {
+    if (isAuthenticated) {
+      const returnTo = searchParams.get("returnTo") ?? "/evaluation";
+      router.replace(returnTo);
+    }
+  }, [isAuthenticated, router, searchParams]);
+
+  const handleSignIn = async (): Promise<void> => {
+    const returnTo = searchParams.get("returnTo") ?? "/evaluation";
+    await signIn(returnTo);
+  };
+
+  if (isAuthenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-lg text-gray-600">Redirecting...</p>
+      </div>
+    );
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
-        <h1 className="mb-2 text-2xl font-bold text-gray-900">
-          JS/React Evaluator
-        </h1>
-        <p className="mb-8 text-sm text-gray-500">
-          Sign in with your Microsoft account to continue.
-        </p>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50">
+      <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-md">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900">
+            JS/React Interviewer Evaluator
+          </h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Sign in to start your technical evaluation
+          </p>
+        </div>
+
         <button
-          type="button"
           onClick={handleSignIn}
-          className="flex w-full items-center justify-center gap-3 rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+          className="w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
         >
-          <MicrosoftIcon />
           Sign in with Microsoft
         </button>
       </div>
-    </main>
-  );
-}
-
-function MicrosoftIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 23 23"
-      width="20"
-      height="20"
-      aria-hidden="true"
-    >
-      <rect x="1" y="1" width="10" height="10" fill="#f25022" />
-      <rect x="12" y="1" width="10" height="10" fill="#7fba00" />
-      <rect x="1" y="12" width="10" height="10" fill="#00a4ef" />
-      <rect x="12" y="12" width="10" height="10" fill="#ffb900" />
-    </svg>
+    </div>
   );
 }

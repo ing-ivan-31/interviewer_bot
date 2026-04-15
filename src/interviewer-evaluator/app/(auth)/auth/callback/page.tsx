@@ -2,88 +2,92 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { msalInstance } from "@/lib/auth/msal-config";
+import { useMsal } from "@azure/msal-react";
+import { AuthenticationResult } from "@azure/msal-browser";
 
-type CallbackStatus = "processing" | "success" | "error";
-
-interface CallbackState {
-  status: CallbackStatus;
-  errorMessage: string | null;
+interface RedirectState {
+  redirectPath?: string;
 }
 
-export default function AuthCallbackPage() {
+export default function AuthCallbackPage(): React.ReactNode {
+  const { instance } = useMsal();
   const router = useRouter();
-  const [state, setState] = useState<CallbackState>({
-    status: "processing",
-    errorMessage: null,
-  });
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function handleCallback(): Promise<void> {
+    const handleRedirect = async (): Promise<void> => {
       try {
-        const result = await msalInstance.handleRedirectPromise();
+        const response = await instance.handleRedirectPromise();
 
-        if (result !== null) {
-          // Successful authentication — set a presence cookie so middleware
-          // knows this session is authenticated. The cookie carries no sensitive
-          // data; actual tokens live in MSAL's sessionStorage cache.
-          document.cookie =
-            "auth-session=1; path=/; SameSite=Strict; max-age=86400";
-
-          // Redirect to the originally requested route (carried in MSAL state)
-          // or fall back to /evaluation.
-          const destination =
-            typeof result.state === "string" && result.state.startsWith("/")
-              ? result.state
-              : "/evaluation";
-
-          setState({ status: "success", errorMessage: null });
-          router.replace(destination);
-        } else {
-          // handleRedirectPromise() returned null — not a redirect callback.
-          // Check if we already have an active account (page reload scenario).
-          const accounts = msalInstance.getAllAccounts();
-          if (accounts.length > 0) {
-            router.replace("/evaluation");
-          } else {
-            router.replace("/login");
-          }
+        if (response) {
+          handleSuccessfulAuth(response);
+          return;
         }
-      } catch (error: unknown) {
-        const message =
-          error instanceof Error ? error.message : "An unknown error occurred.";
-        setState({ status: "error", errorMessage: message });
+
+        // If no response, check if we already have an account
+        const accounts = instance.getAllAccounts();
+        if (accounts.length > 0) {
+          router.replace("/evaluation");
+          return;
+        }
+
+        // No response and no accounts - redirect to login
+        router.replace("/login");
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Authentication failed";
+        setError(errorMessage);
       }
-    }
+    };
 
-    handleCallback();
-  }, [router]);
+    const handleSuccessfulAuth = (response: AuthenticationResult): void => {
+      let redirectPath = "/evaluation";
 
-  if (state.status === "error") {
+      if (response.state) {
+        try {
+          const state = JSON.parse(response.state) as RedirectState;
+          if (state.redirectPath) {
+            redirectPath = state.redirectPath;
+          }
+        } catch {
+          // Invalid state JSON, use default redirect
+        }
+      }
+
+      router.replace(redirectPath);
+    };
+
+    handleRedirect();
+  }, [instance, router]);
+
+  if (error) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50">
-        <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
-          <h1 className="mb-2 text-xl font-bold text-red-600">
-            Authentication Error
-          </h1>
-          <p className="mb-6 text-sm text-gray-700">{state.errorMessage}</p>
-          <a
-            href="/login"
-            className="inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50">
+        <div className="w-full max-w-md space-y-6 rounded-lg bg-white p-8 shadow-md">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-red-600">
+              Authentication Error
+            </h1>
+            <p className="mt-2 text-sm text-gray-600">{error}</p>
+          </div>
+
+          <button
+            onClick={() => router.replace("/login")}
+            className="w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
           >
-            Try again
-          </a>
+            Return to Login
+          </button>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50">
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-        <p className="text-sm text-gray-500">Completing sign in&hellip;</p>
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="text-center">
+        <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent mx-auto" />
+        <p className="text-lg text-gray-600">Completing sign in...</p>
       </div>
-    </main>
+    </div>
   );
 }

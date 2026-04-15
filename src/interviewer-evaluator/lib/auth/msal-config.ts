@@ -1,27 +1,43 @@
-import { Configuration, PublicClientApplication } from "@azure/msal-browser";
+import { PublicClientApplication, Configuration, LogLevel } from "@azure/msal-browser";
 
-const clientId = process.env.NEXT_PUBLIC_MSAL_CLIENT_ID;
-const authority = process.env.NEXT_PUBLIC_MSAL_AUTHORITY;
-const redirectUri = process.env.NEXT_PUBLIC_MSAL_REDIRECT_URI;
-
-if (!clientId) {
-  console.error(
-    "[msal-config] NEXT_PUBLIC_MSAL_CLIENT_ID is not set. MSAL will not initialize correctly."
-  );
-}
-
-export const msalConfig: Configuration = {
+const msalConfig: Configuration = {
   auth: {
-    clientId: clientId ?? "",
-    authority: authority ?? "https://login.microsoftonline.com/common",
-    redirectUri: redirectUri ?? "http://localhost:3000/auth/callback",
+    clientId: process.env.NEXT_PUBLIC_MSAL_CLIENT_ID ?? "",
+    authority: process.env.NEXT_PUBLIC_MSAL_AUTHORITY ?? "",
+    redirectUri: process.env.NEXT_PUBLIC_MSAL_REDIRECT_URI ?? "",
+    postLogoutRedirectUri: "/login",
   },
   cache: {
     cacheLocation: "sessionStorage",
-    storeAuthStateInCookie: false,
+  },
+  system: {
+    loggerOptions: {
+      logLevel: LogLevel.Warning,
+      loggerCallback: (level, message, containsPii) => {
+        if (containsPii) {
+          return;
+        }
+        switch (level) {
+          case LogLevel.Error:
+            console.error(message);
+            break;
+          case LogLevel.Warning:
+            console.warn(message);
+            break;
+          case LogLevel.Info:
+            console.info(message);
+            break;
+          case LogLevel.Verbose:
+            console.debug(message);
+            break;
+        }
+      },
+    },
   },
 };
 
-export const defaultScopes: string[] = ["openid", "profile", "email"];
+export const loginRequest = {
+  scopes: ["openid", "profile", "email"],
+};
 
 export const msalInstance = new PublicClientApplication(msalConfig);
