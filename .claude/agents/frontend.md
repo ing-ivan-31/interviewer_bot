@@ -13,6 +13,21 @@ writing any frontend code.
 
 ---
 
+## UI/UX Skill
+
+Before implementing ANY frontend task — component, page, layout, or style —
+read the UI/UX Pro Max skill first:
+
+This applies to:
+- Every new React component or page
+- Any Tailwind styling or layout decision
+- shadcn/ui component customization
+- Dashboard, chat UI, or any visual output
+
+Do not skip this step. The skill provides the design system, color palette,
+typography, and anti-patterns specific to this project's stack
+(Next.js + shadcn/ui + Tailwind).
+
 ## Stack
 
 | Tool              | Version | Purpose                                    |
@@ -311,6 +326,7 @@ describe("ChatInput", () => {
 - Do not create global CSS files or use inline `style` attributes
 - Do not render a component without a corresponding spec file
 - Never implement a non-trivial feature without a spec. "Non-trivial" = anything touching auth, payments, data schema, or cross-module logic.
+- Do not install dependencies without approval — always ask first
 - Never run builds/tests yourself
 - Never print full terminal output
 - When build needed: "Please build and paste ONLY error section (max 50 lines)"

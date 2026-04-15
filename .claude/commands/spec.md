@@ -16,7 +16,7 @@ Before writing anything, read:
 ## Step 2 — Interview (max 3 questions)
 The feature requested: **$ARGUMENTS**
 
-Ask the developer up to 3 targeted questions:
+Always use @architect agent to follow coding conventions,  ask the developer up to 3 targeted questions:
 1. Who is the actor (candidate / coordinator) and what triggers this action?
 2. What are all the expected outcomes (success + failure cases)?
 3. Any edge cases or constraints already known?
