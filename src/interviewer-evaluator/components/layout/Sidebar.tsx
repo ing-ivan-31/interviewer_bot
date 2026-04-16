@@ -8,6 +8,8 @@ import { NewChatButton } from "./NewChatButton";
 interface SidebarProps {
   isCollapsed?: boolean;
   onToggle?: () => void;
+  showHeader?: boolean;
+  hasNavbar?: boolean;
 }
 
 // Placeholder data for demo purposes
@@ -23,7 +25,12 @@ const DEMO_CHATS: ChatItem[] = [
   { id: "3", title: "TypeScript Generics", preview: "Generic constraints explained", timestamp: new Date() },
 ];
 
-export function Sidebar({ isCollapsed = false, onToggle }: SidebarProps): React.ReactNode {
+export function Sidebar({
+  isCollapsed = false,
+  onToggle,
+  showHeader = true,
+  hasNavbar = false,
+}: SidebarProps): React.ReactNode {
   const handleNewChat = (): void => {
     // Placeholder - will be implemented with routing
     console.log("New chat clicked");
@@ -37,8 +44,8 @@ export function Sidebar({ isCollapsed = false, onToggle }: SidebarProps): React.
   return (
     <aside
       className={`
-        fixed top-0 left-0 h-screen flex flex-col
-        border-r transition-all duration-300 ease-in-out z-40
+        fixed left-0 flex flex-col
+        border-r transition-all duration-300 ease-in-out z-30
         ${isCollapsed ? "w-0 -translate-x-full" : "w-sidebar"}
         lg:relative lg:translate-x-0
       `}
@@ -46,12 +53,14 @@ export function Sidebar({ isCollapsed = false, onToggle }: SidebarProps): React.
         background: "var(--color-sidebar-bg)",
         borderColor: "var(--color-border)",
         width: isCollapsed ? "var(--sidebar-collapsed-width)" : "var(--sidebar-width)",
+        top: hasNavbar ? "var(--header-height)" : "0",
+        height: hasNavbar ? "calc(100vh - var(--header-height))" : "100vh",
       }}
-      aria-label="Main navigation"
+      aria-label="Sidebar navigation"
     >
       {!isCollapsed && (
         <>
-          <SidebarHeader onToggle={onToggle} />
+          {showHeader && <SidebarHeader onToggle={onToggle} />}
 
           {/* Search Input */}
           <div className="px-3 py-2">

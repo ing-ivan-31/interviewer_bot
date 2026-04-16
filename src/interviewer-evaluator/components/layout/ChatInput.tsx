@@ -8,6 +8,7 @@ interface ChatInputProps {
   onSubmit: () => void;
   placeholder?: string;
   disabled?: boolean;
+  isFixed?: boolean;
 }
 
 export function ChatInput({
@@ -16,6 +17,7 @@ export function ChatInput({
   onSubmit,
   placeholder = "Type a message...",
   disabled = false,
+  isFixed = false,
 }: ChatInputProps): React.ReactNode {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -47,9 +49,11 @@ export function ChatInput({
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 pb-4 px-4"
+      className={isFixed ? "fixed bottom-0 left-0 right-0 pb-4 px-4" : "pb-4"}
       style={{
-        background: "linear-gradient(transparent, var(--color-background) 30%)",
+        background: isFixed
+          ? "linear-gradient(transparent, var(--color-background) 30%)"
+          : "transparent",
       }}
     >
       <div

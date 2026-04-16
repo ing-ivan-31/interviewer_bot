@@ -9,3 +9,5 @@ export { MainContent } from "./MainContent";
 export { ChatHeader } from "./ChatHeader";
 export { ChatInput } from "./ChatInput";
 export { NewChatButton } from "./NewChatButton";
+export { Navbar } from "./Navbar";
+export { EvaluationLayout } from "./EvaluationLayout";
