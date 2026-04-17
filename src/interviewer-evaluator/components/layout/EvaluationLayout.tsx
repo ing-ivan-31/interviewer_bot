@@ -122,12 +122,6 @@ export function EvaluationLayout({
         {/* Main Content */}
         <main
           className="flex-1 flex flex-col min-h-full transition-all duration-300"
-          style={{
-            marginLeft:
-              !sidebarCollapsed && mounted && isDesktop
-                ? "var(--sidebar-width)"
-                : "0",
-          }}
         >
           {children}
         </main>

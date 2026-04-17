@@ -53,7 +53,6 @@ export function Sidebar({
         background: "var(--color-sidebar-bg)",
         borderColor: "var(--color-border)",
         width: isCollapsed ? "var(--sidebar-collapsed-width)" : "var(--sidebar-width)",
-        top: hasNavbar ? "var(--header-height)" : "0",
         height: hasNavbar ? "calc(100vh - var(--header-height))" : "100vh",
       }}
       aria-label="Sidebar navigation"

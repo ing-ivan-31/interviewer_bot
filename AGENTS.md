@@ -1,7 +1,10 @@
 # interviewer_bot — AGENTS.md
 
 ## Project
-AI evaluator for JS/React technical interviews. Two independent apps:
+An AI-powered chatbot that evaluates senior JavaScript and React knowledge for
+prospective technical interviewers. Candidates authenticate via Okta SSO, complete
+a multi-section chat evaluation, and receive structured feedback. Coordinators
+manage evaluations through a dashboard and receive reports by email. Two independent apps:
 - `src/interviewer-evaluator/` — Next.js 16 frontend
 - `src/interviewer-evaluator-api/` — NestJS backend + LangGraph + Prisma
 
@@ -25,15 +28,37 @@ AI evaluator for JS/React technical interviews. Two independent apps:
    - `src/interviewer-evaluator-api/.env` (copy from `.env.example`)
    - `src/interviewer-evaluator/.env.local` (copy from `.env`)
 
-## Critical Rules (from CLAUDE.md)
+## Spec-Driven Workflow
+1. `/spec <feature>` → generates `docs/specs/YYYY-MM-DD-feature.md`
+2. Review and approve the spec (change Status:  → Approved)
+3. `/implement <spec-file>` → delegates to sub-agents with Task tool
+4. Sub-agents commit after each task — review diffs before merging
+
+
+## Development Workflow
+
+The order is always: **Spec → Tests → Implementation**. Never reversed.
+
+1. **Spec first** — create `docs/specs/<domain>/<feature>.spec.md` using the
+   template in `.opencode/agents/spec-writer.md`. Use `@spec-writer` to generate it from
+   a plain-English description of what you want to build.
+2. **Tests second** — derive test cases from the spec's acceptance criteria.
+3. **Implement** — use the relevant agent (`@frontend` or `@backend`) to implement.
+4. **Verify** — `npm run typecheck && npm run test` must pass before committing.
+
+## Critical Rules
+- Never implement a non-trivial feature without a spec. "Non-trivial" = anything touching auth, payments, data schema, or cross-module logic.
 - Never run builds/tests yourself
 - Never print full terminal output
 - When build needed: "Please build and paste ONLY error section (max 50 lines)"
-- When test needed: "Please run test and paste ONLY error section (max 50 lines)"
-- Never run git commands — user handles all version control
-- Never drop database or empty a table — always ask first
+- When run test needed: "Please run test and confirm and paste ONLY error section (max 50 lines)"
+- Never run git commands (status, diff, commit, push, etc.)
+- I handle all version control manually
+- Respond with minimal diffs only unless I ask for explanation
+- Focus on one small task at a time
+- Never drop database or empty a table alway ask first
 
-## Tech Stack (actual, not CLAUDE.md defaults)
+## Tech Stack
 - Frontend: Next.js 16.2.3, React 19, Zustand, Tailwind 4
 - Backend: NestJS 11, LangGraph, Prisma, SQLite
 - LLM: Google Gemini only for development Open AI for production
