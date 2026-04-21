@@ -19,6 +19,8 @@ export interface SessionSummary {
 
 type SessionStatus = "idle" | "loading" | "active" | "paused" | "completed" | "error";
 
+export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
+
 interface EvaluationState {
   // Session
   sessionId: string | null;
@@ -27,6 +29,10 @@ interface EvaluationState {
   // Messages
   messages: Message[];
   isLoadingResponse: boolean;
+
+  // WebSocket state
+  isTyping: boolean;
+  connectionStatus: ConnectionStatus;
 
   // Sidebar
   sessions: SessionSummary[];
@@ -40,6 +46,8 @@ interface EvaluationState {
   addMessage: (message: Message) => void;
   setMessages: (messages: Message[]) => void;
   setIsLoadingResponse: (loading: boolean) => void;
+  setTyping: (isTyping: boolean) => void;
+  setConnectionStatus: (status: ConnectionStatus) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setSessions: (sessions: SessionSummary[]) => void;
   reset: () => void;
@@ -50,6 +58,8 @@ const initialState = {
   sessionStatus: "idle" as SessionStatus,
   messages: [],
   isLoadingResponse: false,
+  isTyping: false,
+  connectionStatus: "disconnected" as ConnectionStatus,
   sessions: [],
   sidebarCollapsed: false,
 };
@@ -79,6 +89,14 @@ export const useEvaluationStore = create<EvaluationState>()(
 
       setIsLoadingResponse: (loading: boolean): void => {
         set({ isLoadingResponse: loading });
+      },
+
+      setTyping: (isTyping: boolean): void => {
+        set({ isTyping });
+      },
+
+      setConnectionStatus: (connectionStatus: ConnectionStatus): void => {
+        set({ connectionStatus });
       },
 
       setSidebarCollapsed: (collapsed: boolean): void => {

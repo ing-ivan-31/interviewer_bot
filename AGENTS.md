@@ -46,7 +46,41 @@ The order is always: **Spec → Tests → Implementation**. Never reversed.
 3. **Implement** — use the relevant agent (`@frontend` or `@backend`) to implement.
 4. **Verify** — `npm run typecheck && npm run test` must pass before committing.
 
-## Critical Rules
+## Principles (Andrej Karpathy)
+
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+### 1. Think Before Coding
+
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+### 2. Simplicity First
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- If you write 200 lines and it could be 50, rewrite it.
+
+### 3. Surgical Changes
+
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style.
+
+When your changes create orphans: Remove imports/variables that YOUR changes made unused.
+
+### 4. Goal-Driven Execution
+
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- For multi-step tasks, state a brief plan with verify checkpoints.
+
+---
+
+## Critical Rules (never break)
 - Never implement a non-trivial feature without a spec. "Non-trivial" = anything touching auth, payments, data schema, or cross-module logic.
 - Never run builds/tests yourself
 - Never print full terminal output
