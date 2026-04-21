@@ -337,6 +337,27 @@ For multi-step tasks, state a brief plan:
 
 ---
 
+## Sub-agents
+| Agent | File |
+|-------|------|
+| @architect | `.claude/agents/architect.md` |
+| @frontend | `.claude/agents/frontend.md` |
+| @backend | `.claude/agents/backend.md` |
+| @database | `.claude/agents/database.md` |
+| @spec-writer | `.claude/agents/spec-writer.md` |
+
+## Skills
+
+The following skills are available and should be loaded when relevant:
+
+| Skill | When to use |
+|-------|-------------|
+| `vercel-react-best-practices` | Writing, reviewing, or refactoring React/Next.js code for performance (effects, re-renders, bundle size, async patterns) |
+| `nestjs-best-practices` | Writing, reviewing, or refactoring NestJS code (modules, WebSocket, Repository pattern, security) |
+| `shadcn` | Working with shadcn/ui components, component registry, theming |
+| `ui-ux-pro-max` | UI/UX design, accessibility, Tailwind patterns, component styling |
+| `next-best-practices` | Next.js file conventions, RSC boundaries, data patterns, error handling |
+
 ## Rules (never break):
 - Never implement a non-trivial feature without a spec. "Non-trivial" = anything touching auth, payments, data schema, or cross-module logic.
 - Never run builds/tests yourself

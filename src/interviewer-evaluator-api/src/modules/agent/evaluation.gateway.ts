@@ -62,17 +62,19 @@ export class EvaluationGateway
   ): Promise<void> {
     try {
       // Validate payload
+      this.logger.log(`Session created request received from client: ${client.id}`);
       const parseResult = SessionCreateSchema.safeParse(payload ?? {});
       if (!parseResult.success) {
         this.emitError(client, {
           code: 'INVALID_PAYLOAD',
-          message: parseResult.error.errors.map((e) => e.message).join(', '),
+          message: parseResult.error.issues.map((e) => e.message).join(', '),
         });
         return;
       }
 
       // Create session via AgentService
       const result = await this.agentService.createSession();
+      this.logger.log(`Result: ${result.data.sessionId} for client: ${client.id}`);
 
       // Associate client with session
       this.clientSessions.set(client.id, result.data.sessionId);
@@ -115,13 +117,14 @@ export class EvaluationGateway
       if (!parseResult.success) {
         this.emitError(client, {
           code: 'INVALID_PAYLOAD',
-          message: parseResult.error.errors.map((e) => e.message).join(', '),
+          message: parseResult.error.issues.map((e) => e.message).join(', '),
         });
         return;
       }
 
       const { sessionId } = parseResult.data;
 
+      this.logger.error(`handle session: ${sessionId}`);
       // Get session from AgentService
       let sessionResponse;
       try {
@@ -181,7 +184,7 @@ export class EvaluationGateway
       if (!parseResult.success) {
         this.emitError(client, {
           code: 'INVALID_PAYLOAD',
-          message: parseResult.error.errors.map((e) => e.message).join(', '),
+          message: parseResult.error.issues.map((e) => e.message).join(', '),
         });
         return;
       }

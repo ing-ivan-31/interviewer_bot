@@ -1,50 +1,26 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import { io, Socket } from "socket.io-client";
+import {
+  getSocket,
+  connectSocket,
+  isSocketConnected,
+  emitEvent,
+  type SessionCreatedPayload,
+  type SessionJoinedPayload,
+  type QuestionNewPayload,
+  type SessionCompletePayload,
+  type ErrorPayload,
+} from "@/lib/socket/evaluation-socket";
 
-// ============ Types ============
-
-export interface SessionCreatedPayload {
-  sessionId: string;
-  question: string;
-  questionNumber: number;
-  totalQuestions: number;
-  topic: string;
-  difficulty: string;
-}
-
-export interface SessionJoinedPayload {
-  sessionId: string;
-  question: string | null;
-  questionNumber: number;
-  totalQuestions: number;
-  topic: string;
-  difficulty: string;
-  isComplete: boolean;
-  history: Array<{ question: string; answer: string }>;
-}
-
-export interface QuestionNewPayload {
-  sessionId: string;
-  question: string;
-  questionNumber: number;
-  totalQuestions: number;
-  topic: string;
-  difficulty: string;
-}
-
-export interface SessionCompletePayload {
-  sessionId: string;
-  totalQuestions: number;
-  message: string;
-}
-
-export interface ErrorPayload {
-  code: string;
-  message: string;
-  sessionId?: string;
-}
+// Re-export types for convenience
+export type {
+  SessionCreatedPayload,
+  SessionJoinedPayload,
+  QuestionNewPayload,
+  SessionCompletePayload,
+  ErrorPayload,
+};
 
 export interface UseEvaluationSocketOptions {
   onSessionCreated?: (data: SessionCreatedPayload) => void;
@@ -61,21 +37,8 @@ export interface UseEvaluationSocketReturn {
   connect: () => void;
   disconnect: () => void;
   createSession: (maxQuestions?: number) => void;
-  joinSession: (sessionId: string) => void;
   submitAnswer: (sessionId: string, answer: string) => void;
 }
-
-// ============ Helper Functions ============
-
-function getWebSocketUrl(): string {
-  const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
-  if (!wsUrl) {
-    throw new Error("NEXT_PUBLIC_WS_URL environment variable is required");
-  }
-  return wsUrl;
-}
-
-// ============ Hook Implementation ============
 
 export function useEvaluationSocket(
   options: UseEvaluationSocketOptions = {}
@@ -89,11 +52,11 @@ export function useEvaluationSocket(
     onConnectionChange,
   } = options;
 
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(() => isSocketConnected());
   const [isConnecting, setIsConnecting] = useState(false);
-  const socketRef = useRef<Socket | null>(null);
+  const mountedRef = useRef(true);
 
-  // Store callbacks in refs to avoid re-creating socket on callback changes
+  // Store callbacks in refs to avoid re-registering listeners on callback changes
   const callbacksRef = useRef({
     onSessionCreated,
     onSessionJoined,
@@ -122,93 +85,123 @@ export function useEvaluationSocket(
     onConnectionChange,
   ]);
 
-  // Initialize socket connection
+  // Register event listeners on mount, unregister on unmount
+  useEffect(() => {
+    mountedRef.current = true;
+    const socket = getSocket();
+
+    // Event handlers that use refs for latest callbacks
+    const handleConnect = () => {
+      if (!mountedRef.current) return;
+      setIsConnected(true);
+      setIsConnecting(false);
+      callbacksRef.current.onConnectionChange?.(true);
+    };
+
+    const handleDisconnect = () => {
+      if (!mountedRef.current) return;
+      setIsConnected(false);
+      callbacksRef.current.onConnectionChange?.(false);
+    };
+
+    const handleConnectError = (error: Error) => {
+      if (!mountedRef.current) return;
+      setIsConnecting(false);
+      setIsConnected(false);
+      console.error("WebSocket connection error:", error);
+      callbacksRef.current.onError?.({
+        code: "CONNECTION_ERROR",
+        message: "Failed to connect to server",
+      });
+    };
+
+    const handleSessionCreated = (data: SessionCreatedPayload) => {
+      if (!mountedRef.current) return;
+      callbacksRef.current.onSessionCreated?.(data);
+    };
+
+    const handleSessionJoined = (data: SessionJoinedPayload) => {
+      if (!mountedRef.current) return;
+      callbacksRef.current.onSessionJoined?.(data);
+    };
+
+    const handleQuestionNew = (data: QuestionNewPayload) => {
+      if (!mountedRef.current) return;
+      callbacksRef.current.onQuestionNew?.(data);
+    };
+
+    const handleSessionComplete = (data: SessionCompletePayload) => {
+      if (!mountedRef.current) return;
+      callbacksRef.current.onSessionComplete?.(data);
+    };
+
+    const handleError = (data: ErrorPayload) => {
+      if (!mountedRef.current) return;
+      callbacksRef.current.onError?.(data);
+    };
+
+    // Register listeners
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleConnectError);
+    socket.on("session:created", handleSessionCreated);
+    socket.on("session:joined", handleSessionJoined);
+    socket.on("question:new", handleQuestionNew);
+    socket.on("session:complete", handleSessionComplete);
+    socket.on("error", handleError);
+
+    // If socket is already connected, notify callback
+    if (socket.connected) {
+      callbacksRef.current.onConnectionChange?.(true);
+    }
+
+    // Cleanup: only remove THIS component's listeners, don't disconnect socket
+    return () => {
+      mountedRef.current = false;
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
+      socket.off("session:created", handleSessionCreated);
+      socket.off("session:joined", handleSessionJoined);
+      socket.off("question:new", handleQuestionNew);
+      socket.off("session:complete", handleSessionComplete);
+      socket.off("error", handleError);
+    };
+  }, []);
+
+  // Connect to socket
   const connect = useCallback(() => {
-    if (socketRef.current?.connected) {
+    if (isSocketConnected()) {
+      setIsConnected(true);
       return;
     }
 
     setIsConnecting(true);
 
-    try {
-      const wsUrl = getWebSocketUrl();
-
-      socketRef.current = io(`${wsUrl}/evaluation`, {
-        autoConnect: false,
-        reconnection: true,
-        reconnectionAttempts: 3,
-        reconnectionDelay: 1000,
-        transports: ["websocket"],
+    connectSocket()
+      .then(() => {
+        if (mountedRef.current) {
+          setIsConnected(true);
+          setIsConnecting(false);
+        }
+      })
+      .catch((error) => {
+        if (mountedRef.current) {
+          setIsConnecting(false);
+          console.error("Failed to connect:", error);
+        }
       });
-
-      const socket = socketRef.current;
-
-      // Connection events
-      socket.on("connect", () => {
-        setIsConnected(true);
-        setIsConnecting(false);
-        callbacksRef.current.onConnectionChange?.(true);
-      });
-
-      socket.on("disconnect", () => {
-        setIsConnected(false);
-        callbacksRef.current.onConnectionChange?.(false);
-      });
-
-      socket.on("connect_error", (error: Error) => {
-        setIsConnecting(false);
-        setIsConnected(false);
-        console.error("WebSocket connection error:", error);
-        callbacksRef.current.onError?.({
-          code: "CONNECTION_ERROR",
-          message: "Failed to connect to server",
-        });
-      });
-
-      // Session events
-      socket.on("session:created", (data: SessionCreatedPayload) => {
-        callbacksRef.current.onSessionCreated?.(data);
-      });
-
-      socket.on("session:joined", (data: SessionJoinedPayload) => {
-        callbacksRef.current.onSessionJoined?.(data);
-      });
-
-      socket.on("question:new", (data: QuestionNewPayload) => {
-        callbacksRef.current.onQuestionNew?.(data);
-      });
-
-      socket.on("session:complete", (data: SessionCompletePayload) => {
-        callbacksRef.current.onSessionComplete?.(data);
-      });
-
-      socket.on("error", (data: ErrorPayload) => {
-        callbacksRef.current.onError?.(data);
-      });
-
-      socket.connect();
-    } catch (error) {
-      setIsConnecting(false);
-      console.error("WebSocket initialization error:", error);
-      callbacksRef.current.onError?.({
-        code: "INIT_ERROR",
-        message: "Failed to initialize WebSocket connection",
-      });
-    }
   }, []);
 
-  // Disconnect socket
+  // Disconnect (rarely needed - socket is singleton)
   const disconnect = useCallback(() => {
-    if (socketRef.current) {
-      socketRef.current.disconnect();
-      socketRef.current = null;
-      setIsConnected(false);
-    }
+    // Don't actually disconnect the singleton - just update local state
+    setIsConnected(false);
   }, []);
 
   // Create a new session
   const createSession = useCallback((maxQuestions?: number) => {
-    if (!socketRef.current?.connected) {
+    if (!isSocketConnected()) {
       callbacksRef.current.onError?.({
         code: "NOT_CONNECTED",
         message: "Not connected to server",
@@ -216,25 +209,12 @@ export function useEvaluationSocket(
       return;
     }
 
-    socketRef.current.emit("session:create", { maxQuestions });
-  }, []);
-
-  // Join an existing session
-  const joinSession = useCallback((sessionId: string) => {
-    if (!socketRef.current?.connected) {
-      callbacksRef.current.onError?.({
-        code: "NOT_CONNECTED",
-        message: "Not connected to server",
-      });
-      return;
-    }
-
-    socketRef.current.emit("session:join", { sessionId });
+    emitEvent("session:create", { maxQuestions });
   }, []);
 
   // Submit an answer
   const submitAnswer = useCallback((sessionId: string, answer: string) => {
-    if (!socketRef.current?.connected) {
+    if (!isSocketConnected()) {
       callbacksRef.current.onError?.({
         code: "NOT_CONNECTED",
         message: "Not connected to server",
@@ -242,17 +222,7 @@ export function useEvaluationSocket(
       return;
     }
 
-    socketRef.current.emit("answer:submit", { sessionId, answer });
-  }, []);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-    };
+    emitEvent("answer:submit", { sessionId, answer });
   }, []);
 
   return {
@@ -261,7 +231,6 @@ export function useEvaluationSocket(
     connect,
     disconnect,
     createSession,
-    joinSession,
     submitAnswer,
   };
 }

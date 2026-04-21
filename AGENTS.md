@@ -113,3 +113,15 @@ When your changes create orphans: Remove imports/variables that YOUR changes mad
 | @backend | `.claude/agents/backend.md` |
 | @database | `.claude/agents/database.md` |
 | @spec-writer | `.claude/agents/spec-writer.md` |
+
+## Skills
+
+The following skills are available and should be loaded when relevant:
+
+| Skill | When to use |
+|-------|-------------|
+| `vercel-react-best-practices` | Writing, reviewing, or refactoring React/Next.js code for performance (effects, re-renders, bundle size, async patterns) |
+| `nestjs-best-practices` | Writing, reviewing, or refactoring NestJS code (modules, WebSocket, Repository pattern, security) |
+| `shadcn` | Working with shadcn/ui components, component registry, theming |
+| `ui-ux-pro-max` | UI/UX design, accessibility, Tailwind patterns, component styling |
+| `next-best-practices` | Next.js file conventions, RSC boundaries, data patterns, error handling |

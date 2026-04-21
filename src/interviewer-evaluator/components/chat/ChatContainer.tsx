@@ -6,13 +6,12 @@ import { ChatInput } from "@/components/layout/ChatInput";
 import { useEvaluationStore } from "@/lib/stores/evaluation-store";
 import { useEvaluationSocket } from "@/lib/hooks/useEvaluationSocket";
 
-interface ChatContainerProps {
-  sessionId?: string;
-}
+const WELCOME_MESSAGE =
+  "Welcome to the Interviewer Evaluator. You will be asked questions about JavaScript and React. Please answer each question to the best of your ability. Reply with \"I understand\" to begin.";
 
-export function ChatContainer({
-  sessionId: initialSessionId,
-}: ChatContainerProps): React.ReactNode {
+const WELCOME_MESSAGE_ID = "msg-welcome";
+
+export function ChatContainer(): React.ReactNode {
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -21,10 +20,13 @@ export function ChatContainer({
     messages,
     isTyping,
     connectionStatus,
+    welcomeMessageShown,
     addMessage,
+    setMessages,
     setSessionId,
     setTyping,
     setConnectionStatus,
+    setWelcomeMessageShown,
   } = useEvaluationStore();
 
   // Initialize WebSocket hook with callbacks
@@ -58,8 +60,13 @@ export function ChatContainer({
           timestamp: new Date(),
         });
       },
-      onError: () => {
+      onError: (data) => {
         setTyping(false);
+        console.error("WebSocket error:", data.code, data.message);
+        if (data.code === "SESSION_NOT_FOUND") {
+          setSessionId(null);
+          setMessages([]);
+        }
       },
       onConnectionChange: (connected) => {
         setConnectionStatus(connected ? "connected" : "disconnected");
@@ -70,6 +77,19 @@ export function ChatContainer({
   useEffect(() => {
     connect();
   }, [connect]);
+
+  // Add welcome message when connected (using store state, not ref)
+  useEffect(() => {
+    if (isConnected && !welcomeMessageShown) {
+      setWelcomeMessageShown(true);
+      addMessage({
+        id: WELCOME_MESSAGE_ID,
+        role: "assistant",
+        content: WELCOME_MESSAGE,
+        timestamp: new Date(),
+      });
+    }
+  }, [isConnected, welcomeMessageShown, setWelcomeMessageShown, addMessage]);
 
   // Update connection status when connecting
   useEffect(() => {
@@ -92,32 +112,30 @@ export function ChatContainer({
     const trimmedValue = inputValue.trim();
     if (!trimmedValue || isTyping || !isConnected) return;
 
-    // Add user message to UI
-    const userMessage = {
+    const isFirstUserMessage =
+      messages.filter((m) => m.role === "user").length === 0;
+
+    addMessage({
       id: `msg-${Date.now()}-user`,
       role: "user" as const,
       content: trimmedValue,
       timestamp: new Date(),
-    };
-
-    addMessage(userMessage);
+    });
     setInputValue("");
 
-    // Show typing indicator immediately
     setTyping(true);
 
-    if (!sessionId) {
-      // First message - create a new session
+    if (isFirstUserMessage) {
       createSession();
     } else {
-      // Subsequent messages - submit as answer
-      submitAnswer(sessionId, trimmedValue);
+      submitAnswer(sessionId!, trimmedValue);
     }
   }, [
     inputValue,
     isTyping,
     isConnected,
     sessionId,
+    messages,
     addMessage,
     setTyping,
     createSession,
@@ -150,10 +168,8 @@ export function ChatContainer({
       className="flex flex-col h-full"
       style={{ minHeight: "calc(100vh - var(--header-height))" }}
     >
-      {/* Messages Area */}
       <ChatMessageList messages={formattedMessages} isLoading={isTyping} />
 
-      {/* Input Area */}
       <div
         className="sticky bottom-0"
         style={{
