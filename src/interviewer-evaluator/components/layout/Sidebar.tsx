@@ -94,7 +94,7 @@ export function Sidebar({
             </div>
           </div>
 
-          {/* Folders Section */}
+          {/* Folders Section 
           <div className="px-3 py-2">
             <div
               className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider mb-2"
@@ -123,7 +123,7 @@ export function Sidebar({
               </button>
             </div>
             <SidebarNav folders={DEMO_FOLDERS} />
-          </div>
+          </div>*/}
 
           {/* Chats Section */}
           <div className="flex-1 overflow-hidden flex flex-col px-3 py-2">
@@ -133,7 +133,7 @@ export function Sidebar({
             >
               Chats
             </div>
-            <SidebarChatList chats={DEMO_CHATS} onSelect={handleSelectChat} />
+            {/* <SidebarChatList chats={DEMO_CHATS} onSelect={handleSelectChat} />*/}
           </div>
 
           {/* New Chat Button */}

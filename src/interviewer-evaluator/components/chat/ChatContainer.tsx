@@ -4,84 +4,171 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { ChatMessageList, type Message } from "./ChatMessageList";
 import { ChatInput } from "@/components/layout/ChatInput";
 import { useEvaluationStore } from "@/lib/stores/evaluation-store";
+import { useEvaluationSocket } from "@/lib/hooks/useEvaluationSocket";
 
-interface ChatContainerProps {
-  sessionId: string;
-}
+const WELCOME_MESSAGE =
+  "Welcome to the Interviewer Evaluator. You will be asked questions about JavaScript and React. Please answer each question to the best of your ability. Reply with \"I understand\" to begin.";
 
-export function ChatContainer({
-  sessionId,
-}: ChatContainerProps): React.ReactNode {
+const WELCOME_MESSAGE_ID = "msg-welcome";
+
+export function ChatContainer(): React.ReactNode {
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const {
+    sessionId,
     messages,
-    isLoadingResponse,
+    isTyping,
+    connectionStatus,
+    welcomeMessageShown,
     addMessage,
-    setIsLoadingResponse,
+    setMessages,
+    setSessionId,
+    setTyping,
+    setConnectionStatus,
+    setWelcomeMessageShown,
   } = useEvaluationStore();
+
+  // Initialize WebSocket hook with callbacks
+  const { isConnected, isConnecting, connect, createSession, submitAnswer } =
+    useEvaluationSocket({
+      onSessionCreated: (data) => {
+        setSessionId(data.sessionId);
+        setTyping(false);
+        addMessage({
+          id: `msg-${Date.now()}-ai`,
+          role: "assistant",
+          content: data.question,
+          timestamp: new Date(),
+        });
+      },
+      onQuestionNew: (data) => {
+        setTyping(false);
+        addMessage({
+          id: `msg-${Date.now()}-ai`,
+          role: "assistant",
+          content: data.question,
+          timestamp: new Date(),
+        });
+      },
+      onSessionComplete: (data) => {
+        setTyping(false);
+        addMessage({
+          id: `msg-${Date.now()}-ai`,
+          role: "assistant",
+          content: data.message,
+          timestamp: new Date(),
+        });
+      },
+      onError: (data) => {
+        setTyping(false);
+        console.error("WebSocket error:", data.code, data.message);
+        if (data.code === "SESSION_NOT_FOUND") {
+          setSessionId(null);
+          setMessages([]);
+        }
+      },
+      onConnectionChange: (connected) => {
+        setConnectionStatus(connected ? "connected" : "disconnected");
+      },
+    });
+
+  // Connect on mount
+  useEffect(() => {
+    connect();
+  }, [connect]);
+
+  // Add welcome message when connected (using store state, not ref)
+  useEffect(() => {
+    if (isConnected && !welcomeMessageShown) {
+      setWelcomeMessageShown(true);
+      addMessage({
+        id: WELCOME_MESSAGE_ID,
+        role: "assistant",
+        content: WELCOME_MESSAGE,
+        timestamp: new Date(),
+      });
+    }
+  }, [isConnected, welcomeMessageShown, setWelcomeMessageShown, addMessage]);
+
+  // Update connection status when connecting
+  useEffect(() => {
+    if (isConnecting) {
+      setConnectionStatus("connecting");
+    }
+  }, [isConnecting, setConnectionStatus]);
 
   // Convert store messages to the format expected by ChatMessageList
   const formattedMessages: Message[] = messages.map((msg) => ({
     id: msg.id,
     role: msg.role,
     content: msg.content,
-    timestamp: msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp),
+    timestamp:
+      msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp),
   }));
 
+  // Handle sending a message
   const handleSubmit = useCallback((): void => {
     const trimmedValue = inputValue.trim();
-    if (!trimmedValue || isLoadingResponse) return;
+    if (!trimmedValue || isTyping || !isConnected) return;
 
-    // Add user message
-    const userMessage = {
+    const isFirstUserMessage =
+      messages.filter((m) => m.role === "user").length === 0;
+
+    addMessage({
       id: `msg-${Date.now()}-user`,
       role: "user" as const,
       content: trimmedValue,
       timestamp: new Date(),
-    };
-
-    addMessage(userMessage);
+    });
     setInputValue("");
-    setIsLoadingResponse(true);
 
-    // Simulate AI response (to be replaced with actual API call)
-    // This is a placeholder - actual implementation will use WebSocket
-    setTimeout(() => {
-      const aiMessage = {
-        id: `msg-${Date.now()}-ai`,
-        role: "assistant" as const,
-        content:
-          "Thank you for your response. Let me evaluate your answer...\n\nThis is a placeholder response. The actual AI evaluation will be implemented with the WebSocket connection to the backend.",
-        timestamp: new Date(),
-      };
-      addMessage(aiMessage);
-      setIsLoadingResponse(false);
-    }, 2000);
-  }, [inputValue, isLoadingResponse, addMessage, setIsLoadingResponse]);
+    setTyping(true);
+
+    if (isFirstUserMessage) {
+      createSession();
+    } else {
+      submitAnswer(sessionId!, trimmedValue);
+    }
+  }, [
+    inputValue,
+    isTyping,
+    isConnected,
+    sessionId,
+    messages,
+    addMessage,
+    setTyping,
+    createSession,
+    submitAnswer,
+  ]);
 
   // Focus input after sending message
   useEffect(() => {
-    if (!isLoadingResponse && inputRef.current) {
+    if (!isTyping && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [isLoadingResponse]);
+  }, [isTyping]);
+
+  // Determine placeholder text based on connection status
+  const getPlaceholder = (): string => {
+    if (connectionStatus === "connecting" || isConnecting) {
+      return "Connecting...";
+    }
+    if (connectionStatus === "disconnected" || connectionStatus === "error") {
+      return "Disconnected. Please refresh.";
+    }
+    if (isTyping) {
+      return "Waiting for response...";
+    }
+    return "Type your answer...";
+  };
 
   return (
-    <div
-      className="flex flex-col h-full"
-      style={{ minHeight: "calc(100vh - var(--header-height))" }}
-    >
-      {/* Messages Area */}
-      <ChatMessageList
-        messages={formattedMessages}
-        isLoading={isLoadingResponse}
-      />
+    <div className="flex flex-col h-full overflow-hidden">
+      <ChatMessageList messages={formattedMessages} isLoading={isTyping} />
 
-      {/* Input Area */}
       <div
-        className="sticky bottom-0"
+        className="flex-shrink-0"
         style={{
           padding: "var(--spacing-4)",
           background: "var(--color-background)",
@@ -95,8 +182,8 @@ export function ChatContainer({
             value={inputValue}
             onChange={setInputValue}
             onSubmit={handleSubmit}
-            disabled={isLoadingResponse}
-            placeholder="Type your answer..."
+            disabled={!isConnected || isTyping}
+            placeholder={getPlaceholder()}
           />
         </div>
       </div>
