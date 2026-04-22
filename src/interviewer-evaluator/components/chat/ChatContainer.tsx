@@ -164,14 +164,11 @@ export function ChatContainer(): React.ReactNode {
   };
 
   return (
-    <div
-      className="flex flex-col h-full"
-      style={{ minHeight: "calc(100vh - var(--header-height))" }}
-    >
+    <div className="flex flex-col h-full overflow-hidden">
       <ChatMessageList messages={formattedMessages} isLoading={isTyping} />
 
       <div
-        className="sticky bottom-0"
+        className="flex-shrink-0"
         style={{
           padding: "var(--spacing-4)",
           background: "var(--color-background)",
